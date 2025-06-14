@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\ClientController;
 use App\Http\Controllers\API\TrainerController;
@@ -10,15 +9,20 @@ use App\Http\Controllers\API\ExerciseController;
 use App\Http\Controllers\API\WorkoutController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\MessageController;
-
-// Get CSRF cookie (per frontend SPA)
-Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
+use App\Http\Controllers\API\AuthController;
 
 // Public: Registrazione trainer
 Route::post('/register/trainer', [TrainerController::class, 'register']);
 
+//Public Login
+Route::post('/login', [AuthController::class, 'login']);
+
+
 // Accesso per tutti gli utenti autenticati
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    //logout
+    Route::post('/logout', [AuthController::class, 'logout']);
     
     // User info
     Route::prefix('user')->group(function () {

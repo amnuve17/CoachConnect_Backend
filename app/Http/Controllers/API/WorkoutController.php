@@ -10,15 +10,35 @@ use Illuminate\Http\Request;
 class WorkoutController extends Controller
 {
     // Lista i workout di un cliente
-    public function index(Request $request, $clientId)
+    public function index(Request $request)
     {
-        $trainer = $request->user();
-
-        $client = Client::where('trainer_id', $trainer->id)->findOrFail($clientId);
-
-        $workouts = $client->workouts()->get();
-
-        return response()->json($workouts);
+        $user = $request->user();
+    
+        // Se l'utente è un client, restituisci solo i suoi workout
+        if ($user->role === 'client') {
+            return response()->json(
+                Workout::where('client_id', $user->id)->get()
+            );
+        }
+    
+        // Se è un trainer, può filtrare i workout tramite client_id (passato nella query string)
+        if ($user->role === 'trainer') {
+            $clientId = $request->query('client_id');
+    
+            if ($clientId) {
+                return response()->json(
+                    Workout::where('client_id', $clientId)->get()
+                );
+            }
+    
+            // Se non specifica client_id, restituisci tutti i suoi workout per tutti i client associati
+            $clientIds = $user->clients()->pluck('id'); // assuming Trainer hasMany Clients
+            return response()->json(
+                Workout::whereIn('client_id', $clientIds)->get()
+            );
+        }
+    
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
 
     // Crea un nuovo workout per un cliente

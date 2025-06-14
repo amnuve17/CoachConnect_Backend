@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\API;
+use Laravel\Sanctum\HasApiTokens;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
