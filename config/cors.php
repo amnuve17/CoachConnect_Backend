@@ -22,7 +22,7 @@ return [
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:3000'),
         'http://localhost:5173',
-        'https://tuo-site.netlify.app',
+        'https://coachconnect-nicola.netlify.app',
     ],
 
     'allowed_origins_patterns' => [],
