@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Notifications visibili all'utente autenticato
     Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
         Route::get('/', 'index');
+        Route::get('{id}', 'show');
         Route::patch('{id}/read', 'markAsRead');
     });
 

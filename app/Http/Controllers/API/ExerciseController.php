@@ -15,48 +15,92 @@ class ExerciseController extends Controller
         return response()->json(Exercise::all());
     }
 
-    public function show($id)
-    {
-        $exercise = Exercise::findOrFail($id);
-        return response()->json($exercise);
+    public function show(Request $request, $id) {
+        $user = $request->user();
+        $workout = Workout::with('client.user')->findOrFail($id);
+    
+        // Permesso: trainer o client solo se autorizzato
+        if ($user->role === 'trainer' && $workout->client->trainer_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if ($user->role === 'client' && $workout->client_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    
+        return response()->json($workout);
     }
 
     // Solo i trainer possono creare
-    public function store(Request $request)
-    {
+    public function store(Request $request) {
+        $trainer = $request->user();
+    
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'muscle_group' => ['required', Rule::in(['chest', 'back', 'legs', 'arms', 'shoulders', 'core', 'full_body'])],
+            'client_id' => 'required|exists:clients,id',
+            'title' => 'required|string|max:255',
+            'date' => 'required|date',
+            'notes' => 'nullable|string',
+            'exercises' => 'required|array|min:1',
+            'exercises.*.name' => 'required|string|max:255',
+            'exercises.*.sets' => 'required|integer|min:1',
+            'exercises.*.reps' => 'required|integer|min:1',
+            'exercises.*.rest_seconds' => 'required|integer|min:0',
+            'exercises.*.notes' => 'nullable|string',
         ]);
-
-        $exercise = Exercise::create($data);
-
-        return response()->json($exercise, 201);
+    
+        // Controlla che il client sia del trainer loggato
+        $client = Client::where('id', $data['client_id'])->where('trainer_id', $trainer->id)->firstOrFail();
+    
+        $workout = Workout::create([
+            'client_id' => $client->id,
+            'date' => $data['date'],
+            'notes' => $data['notes'] ?? null,
+            'title' => $data['title']
+        ]);
+    
+        foreach ($data['exercises'] as $exerciseData) {
+            $workout->exercises()->create($exerciseData);
+        }
+    
+        return response()->json($workout->load('exercises'), 201);
     }
 
     // Solo i trainer possono aggiornare
-    public function update(Request $request, $id)
-    {
-        $exercise = Exercise::findOrFail($id);
-
+    public function update(Request $request, $id) {
+        $user = $request->user();
+        $workout = Workout::with('client.user')->findOrFail($id);
+    
+        // Permesso...
+        if ($user->role === 'trainer' && $workout->client->trainer_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if ($user->role === 'client' && $workout->client_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    
         $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'muscle_group' => ['sometimes', Rule::in(['chest', 'back', 'legs', 'arms', 'shoulders', 'core', 'full_body'])],
+            'title' => 'sometimes|string|max:255',
+            'date' => 'sometimes|date',
+            'notes' => 'nullable|string',
+            // ... altri campi se servono
         ]);
-
-        $exercise->update($data);
-
-        return response()->json($exercise);
+        $workout->update($data);
+        return response()->json($workout);
     }
 
     // Solo i trainer possono eliminare
-    public function destroy($id)
-    {
-        $exercise = Exercise::findOrFail($id);
-        $exercise->delete();
-
-        return response()->json(['message' => 'Esercizio eliminato']);
+    public function destroy(Request $request, $id) {
+        $user = $request->user();
+        $workout = Workout::with('client.user')->findOrFail($id);
+    
+        // Permesso...
+        if ($user->role === 'trainer' && $workout->client->trainer_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if ($user->role === 'client' && $workout->client_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+    
+        $workout->delete();
+        return response()->json(['message' => 'Workout eliminato.']);
     }
 }
